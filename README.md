@@ -7,7 +7,12 @@
     - move some errors from runtime to compile time 
     - It serves as the foundation for a great code authoring experience
 - package.jsoon 
-     tsc: typescript compiler
+    ```json
+    "scripts": {
+        "dev": "tsc --watch --preserveWatchOutput"
+    }
+    ``` 
+    tsc: typescript compiler
     --watch: countiunous watching file changes 
     --preserveWatchOutput: keep console output
     ```json
@@ -27,8 +32,9 @@
     ```json
     {
     "compilerOptions": {
-        "outDir": "dist", // where to put the TS files
-        "target": "ES3" // which level of JS support to target
+        "outDir": "dist", // where to put the TS files 
+        // tsc --outDir dist
+        "target": "ES3" // which level of JS support to target // default es3
     },
     "include": ["src"] // which files to compile
     }
@@ -38,9 +44,21 @@
     .ts files contain both type information and code that runs
     .js files contain only code that runs
     **.d.ts** files contain only type information
-- node.js setup 
-    tsconfig.json 
+    ```ts
+    /**
+     * Add three numbers
+    * @param a first number
+    * @param b second
+    */
+    export async function addNumbers(a: number, b: number) {
+    await timeout(500)
+    return a + b
+    }
     ```
+- node.js setup 
+    - node runs with common js 
+    tsconfig.json 
+    ```json
     "compilerOptions": {
         "outDir": "dist",
         "module": "CommonJS",
@@ -55,19 +73,19 @@ let endTime         // type: any
 let endTime: Date   // type: Date // type annotation
 function add(a: number, b: number): number {} 
 // In TypeScript, variables are “born” with their types.
-// TS is able to make a more specific assumption here
-//
+// TS is able to make type assumption
+// 
 ```
 
 # objects 
 ```ts 
-    {
+    (car: {
         make: string
         model: string
         year: number
         chargeVoltage?: number  // optional   // (property) chargeVoltage?: number | undefined
         chargeVoltage: number | undefined   // must have chargeVoltage key
-    }
+    })
 ```
 - Excess property 
     - Remove extra property from the object
@@ -76,13 +94,13 @@ function add(a: number, b: number): number {}
 
 - index signatures
     ```ts
-    {
+    const phones : {
         [k: string]: {
             country: string
             area: string
             number: string
-        }
-    }
+        } | undefined  
+    } = {}
     const phones = {
         home: { country: "+1", area: "211", number: "652-4515" },
         work: { country: "+1", area: "670", number: "752-5856" },
@@ -260,23 +278,191 @@ you must use an interface.
     ```
 
 # JSON 
-!todo
+```ts
+type JSONPrimitive = string | number | boolean | null
+type JSONObject = { [k: string]: JSONValue }
+type JSONArray = JSONValue[]
+type JSONValue = JSONArray | JSONObject | JSONPrimitive
+```
 
 # function 
-```ts
+- type & interface
+    ```ts
     interface TwoNumberCalculation {
         (x: number, y: number): number
     }
     type TwoNumberCalc = (x: number, y: number) => number
-```
+    ```
 
 - void
-!todo 
-```ts
+    - the return value of a void function is ignored.
+    - void should only be used as function return type
+    ```ts
     function invokeInFourSeconds(callback: () => undefined) {
     setTimeout(callback, 4000)
     }
     function invokeInFiveSeconds(callback: () => void) {
     setTimeout(callback, 5000)
     }
+    ```
+
+- function overloads
+```ts
+type FormSubmitHandler = (data: FormData) => void
+type MessageHandler = (evt: MessageEvent) => void
+ 
+function handleMainEvent(   // case 1
+  elem: HTMLFormElement,
+  handler: FormSubmitHandler
+)
+function handleMainEvent(   // case 2
+  elem: HTMLIFrameElement,
+  handler: MessageHandler
+)
+
+function handleMainEvent(   // general 
+  elem: HTMLFormElement | HTMLIFrameElement,
+  handler: FormSubmitHandler | MessageHandler
+) {}
+ 
+const myFrame = document.getElementsByTagName("iframe")[0]
+const myForm = document.getElementsByTagName("form")[0]
+
+
+handleMainEvent(myFrame, (val) => {}
+handleMainEvent(myForm, (val) => {}
+
 ```
+
+- this 
+```ts
+// .bind
+// .call
+// .apply 
+
+function myClickHandler(
+  this: HTMLButtonElement,
+  event: Event
+) {
+  this.disabled = true
+}
+const myButton = document.getElementsByTagName("button")[0]
+const boundHandler = myClickHandler.bind(myButton)
+boundHandler(new Event("click"))
+// myClickHandler.call(myButton, new Event("click"))
+```
+
+# class
+```ts
+class Car {
+  make: string
+  model: string
+  year: number
+  constructor(make: string, model: string, year: number) {
+    this.make = make
+    this.model = model
+    this.year = year
+  }
+}
+let sedan = new Car("Honda", "Accord", 2017)
+// sedan.activateTurnSignal("left") // not safe!
+// new Car(2017, "Honda", "Accord") // not safe!
+```
+```ts
+class Car {
+  constructor(
+    public make: string,
+    public model: string,
+    public year: number
+  ) {}
+}
+ 
+const myCar = new Car("Honda", "Accord", 2017)
+myCar.make
+```
+
+- limited exposure 
+    - public : everyone (this is the default)
+    - private : the instance itself, and subclasses **# privateAlias**
+    - protected : only the instance itself
+    - readonly: in combination with the other 3, can assign in constructor
+    - disappear when compile
+
+# Types & Values 
+- top types: any possible value allowed by the system
+    - any 
+    - unknown : need to use type guard with it. 
+    ```ts
+    let myUnknown: unknown = 14 
+    if (typeof myUnknown === 'number'){
+        myUnknown
+    }
+    ```
+- bottom types: 
+    - never: no possible value allowed by the system
+        - useful for **Exhaustive conditionals**
+
+- **is** type guard: 
+    ```ts
+    // interface
+    interface CarLike {
+        make: string
+        model: string
+        year: number
+    }
+    // to be checked
+    let maybeCar: unknown
+
+    // guard
+    function isCarLike(valueToTest: any):valueToTest is CarLike{
+        retrun (
+            // user defined checks that return true or false 
+        )
+    }
+    // use guard
+    if(isCarLike(maybeCar)){
+        maybeCar //  maybeCar: CarLike
+    }
+
+
+    ```
+
+- nullish values: 
+    - null: there is a value, and that value is nothing. 
+    - undefined: the value isn’t available (yet?)
+    - void: function’s return value should be ignored
+    ```ts
+    type GroceryCart = {
+        fruits?: { name: string; qty: number }[]
+        vegetables?: { name: string; qty: number }[]
+    }
+    // cart.fruits.push({ name: "kumkuat", qty: 1 }) ts error: fruit could be undefined
+    cart.fruits!.push({ name: "kumkuat", qty: 1 }) // success
+    // !: tells ts to ignore undefined, it will have a value
+
+    ```
+
+# Generics
+- This allows us to traffic that type information in one side of the function and out the other.
+
+- General Type
+    ```TS
+    function identity<T>(arg: T): T{
+    return arg;
+    }
+
+    let myIdentity: <T>(arg: T) => T = identity;
+    ```
+
+- Generic Type Extends
+    ```ts
+    interface HasId {
+    id: string
+    }
+    interface Dict<T> {
+    [k: string]: T
+    }
+    function listToDict<T extends HasId>(list: T[]): Dict<T> {
+
+    }
+    ```
